@@ -1,11 +1,367 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus</title>
-    </head>
-    <body>
-        PakePlus
-    </body>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能吃药提醒</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,sans-serif}
+body{margin:0;padding:12px;background:#f4f7fa;font-size:32px}
+.container{max-width:500px;margin:0 auto;background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.title{text-align:center;font-size:40px;font-weight:bold;margin:10px 0 20px;color:#222}
+.tip-text{text-align:center;color:#ff3b30;font-weight:bold;margin:10px 0;font-size:32px}
+.next-info{text-align:center;color:#007aff;font-weight:bold;margin:8px 0;font-size:32px}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;margin:6px 0;font-size:32px;background:#007aff;color:white}
+.btn-gray{background:#888}
+.med-btn{width:100%;padding:14px;margin:7px 0;border:none;border-radius:12px;background:#ff3b30;color:white;text-align:left;font-size:32px;display:flex;justify-content:space-between;align-items:center}
+.med-btn.done{background:#34c759}
+.img-icon{width:36px;height:36px;background:#fff;border-radius:6px;padding:4px}
+.popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;color:white;font-size:52px;z-index:999}
+.img-popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:1000}
+.img-popup img{max-width:90%;max-height:90%}
+.panel{margin:16px 0;padding:12px;border:1px solid #ddd;border-radius:12px}
+.panel-title{font-weight:bold;margin-bottom:8px;font-size:34px}
+select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font-size:32px}
+.history-box{max-height:260px;overflow-y:auto;padding:8px}
+.history-item{padding:8px 0;border-bottom:1px solid #eee;font-size:30px}
+.tab{display:flex;gap:8px;margin-bottom:12px}
+.tab button{flex:1;padding:10px;border-radius:8px;border:none;background:#eee;font-size:32px}
+.tab button.active{background:#007aff;color:white}
+.page{display:none}
+.page.show{display:block}
+.upload-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="title">智能吃药提醒管家</div>
+
+  <div class="tab">
+    <button class="tabbtn active" data-page="home">主页</button>
+    <button class="tabbtn" data-page="setting">设置</button>
+    <button class="tabbtn" data-page="history">记录</button>
+  </div>
+
+  <div id="home" class="page show">
+    <div class="tip-text" id="tipText" style="display:none"></div>
+    <div class="next-info" id="nextTxt"></div>
+    <button class="btn" id="earlyBtn" style="display:none">提前吃药</button>
+    <div id="medArea"></div>
+  </div>
+
+  <div id="setting" class="page">
+    <div class="panel">
+      <div class="panel-title">选择本地提醒铃声</div>
+      <input type="file" id="localAudio" accept="audio/*" style="margin-bottom:8px">
+      <button class="btn btn-gray" id="playLocal">试听已选铃声</button>
+      <div id="audioName" style="margin-top:6px;font-size:28px;color:#666"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">服药时间修改</div>
+      <select id="timeSelect"></select>
+      <input type="time" id="newTime" style="width:100%;margin-top:8px">
+      <button class="btn btn-gray" id="saveTime">保存修改</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">药品照片设置</div>
+      <select id="medSelect" style="margin-bottom:8px"></select>
+      <input type="file" id="medImgUpload" accept="image/*" style="margin-bottom:8px">
+      <button class="btn btn-gray" id="saveMedImg">保存药品照片</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">重复天数</div>
+      <select id="repeatDay">
+        <option value="0">每天重复</option>
+        <option value="1">1天</option>
+        <option value="3">3天</option>
+        <option value="7">7天</option>
+        <option value="14">14天</option>
+        <option value="30">30天</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="history" class="page">
+    <div class="panel-title">服药记录</div>
+    <div class="history-box" id="historyList"></div>
+    <button class="btn btn-gray" id="clearHistory">清空记录</button>
+  </div>
+
+  <div class="popup" id="okPopup">你真棒 ✅</div>
+  <div class="img-popup" id="imgPopup" onclick="this.style.display='none'">
+    < img id="bigImg">
+  </div>
+</div>
+
+<script>
+let medSchedule = [
+  {time:"08:00",name:"早餐前",list:["泮托拉唑片 1片"]},
+  {time:"10:00",name:"早餐后1小时",list:["舍曲林片 2片","沙库巴曲 1.5片","螺内酯片 1.5片","甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
+  {time:"16:00",name:"下午4点",list:["甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
+  {time:"20:00",name:"晚上8点",list:["阿托伐他汀 1片","甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
+  {time:"21:00",name:"晚上9点",list:["富马酸喹硫平 1片"]}
+];
+
+let allMeds = [];
+medSchedule.forEach(g => g.list.forEach(m => { if(!allMeds.includes(m)) allMeds.push(m); }));
+let medImgMap = JSON.parse(localStorage.getItem("medImgMap") || "{}");
+
+let alertSound = new Audio();
+alertSound.loop = true;
+let userAudioUrl = null;
+
+let current = null;
+let done = new Set();
+let timer10 = null;
+let timer2h = null;
+let timer1m = null;
+let autoBackTimer = null;
+let history = JSON.parse(localStorage.getItem("medHistory") || "[]");
+let nineDone = false;
+
+window.onload = () => {
+  tabSwitch(); initTimeSelect(); initMedSelect(); loadHistory(); bindLocalAudio(); bindMedImg(); startAutoBack();
+  setInterval(checkNow,1000); setInterval(showHome,1000); showHome();
+}
+
+function tabSwitch(){
+  document.querySelectorAll(".tabbtn").forEach(b=>{
+    b.onclick = () => {
+      document.querySelectorAll(".tabbtn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      document.querySelectorAll(".page").forEach(p=>p.classList.remove("show"));
+      document.getElementById(b.dataset.page).classList.add("show");
+      resetAutoBack();
+    }
+  })
+}
+
+function startAutoBack() {
+  resetAutoBack();
+  document.addEventListener("touchstart", resetAutoBack);
+  document.addEventListener("mousemove", resetAutoBack);
+  document.addEventListener("click", resetAutoBack);
+}
+function resetAutoBack() {
+  clearTimeout(autoBackTimer);
+  autoBackTimer = setTimeout(() => { goHome(); }, 60000);
+}
+function goHome() {
+  document.querySelectorAll(".tabbtn").forEach(x => x.classList.remove("active"));
+  document.querySelector('[data-page="home"]').classList.add("active");
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("show"));
+  document.getElementById("home").classList.add("show");
+}
+
+function showHome(){
+  if(current) return;
+  document.getElementById("medArea").innerHTML = "";
+  document.getElementById("earlyBtn").style.display = "none";
+
+  let now = new Date();
+  let h = now.getHours();
+  let isNight = (h >= 21 && nineDone) || h >= 21.5;
+  let isMidnight = h >= 0;
+
+  if (isNight && !isMidnight) {
+    document.getElementById("tipText").innerText = "睡前半小时吃劳拉2片，祝您做个好梦。";
+    document.getElementById("tipText").style.display = "block";
+  } else {
+    document.getElementById("tipText").style.display = "none";
+  }
+
+  let next = getNext();
+  if(!next) return;
+  let [h2,m] = next.time.split(":");
+  let t = new Date();
+  t.setHours(h2,m,0);
+  if(t < now) t.setDate(t.getDate()+1);
+  let left = t - now;
+  let near = left <= 2*60*60*1000;
+  if(near){
+    document.getElementById("nextTxt").innerText = `即将：${next.name} ${next.time}`;
+    let eb = document.getElementById("earlyBtn");
+    eb.style.display = "block";
+    eb.onclick = () => startRemind(next);
+  }else{
+    document.getElementById("nextTxt").innerText = `下次：${next.time} ${next.name}`;
+  }
+}
+
+function checkNow(){
+  if(current) return;
+  let now = new Date();
+  let hm = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0");
+  let item = medSchedule.find(x => x.time == hm);
+  if(item) startRemind(item);
+}
+
+function startRemind(item){
+  current = item;
+  done.clear();
+  nineDone = item.time === "21:00";
+  document.getElementById("earlyBtn").style.display = "none";
+
+  if(alertSound.src){ alertSound.currentTime = 0; alertSound.play(); }
+  timer1m = setTimeout(()=>alertSound.pause(), 60000);
+  timer2h = setTimeout(stopAll, 2*60*60*1000);
+  timer10 = setInterval(()=>{
+    if(done.size < item.list.length && alertSound.src){
+      alertSound.currentTime = 0; alertSound.play();
+      setTimeout(()=>alertSound.pause(), 60000);
+    }
+  }, 10*60*1000);
+  showBtns(item);
+}
+
+function showBtns(item){
+  let area = document.getElementById("medArea");
+  area.innerHTML = `<div style='text-align:center;font-weight:bold;margin:10px;font-size:32px'>${item.name} 服药</div>`;
+  item.list.forEach((s,i)=>{
+    let btn = document.createElement("button");
+    btn.className = "med-btn";
+    btn.innerHTML = `<span>${s}</span>`;
+
+    let imgIcon = document.createElement("img");
+    imgIcon.src = "https://p3-flow-imagex-sign.bytecdn.com/tos-cn-i-a9rns2rl1c/9b9d0e0f6b9f40009c000f0c00000000~tplv-a9rns2rl1c-image.image";
+    imgIcon.className = "img-icon";
+    imgIcon.onclick = (e)=>{ e.stopPropagation(); showMedImg(s); };
+    btn.appendChild(imgIcon);
+
+    btn.onclick = () => {
+      btn.classList.add("done");
+      done.add(i);
+      checkAll();
+    }
+    area.appendChild(btn);
+  })
+}
+
+function showMedImg(medName){
+  if(medImgMap[medName]){
+    document.getElementById("bigImg").src = medImgMap[medName];
+    document.getElementById("imgPopup").style.display = "flex";
+  } else {
+    alert("未设置该药品照片");
+  }
+}
+
+function checkAll(){
+  if(!current) return;
+  if(done.size == current.list.length){
+    stopAll();
+    addHistory(current.name, current.time);
+    let p = document.getElementById("okPopup");
+    p.style.display = "flex";
+    setTimeout(()=>p.style.display = "none", 5000);
+  }
+}
+
+function stopAll(){
+  alertSound.pause();
+  clearInterval(timer10);
+  clearTimeout(timer2h);
+  clearTimeout(timer1m);
+  current = null;
+  done.clear();
+  showHome();
+}
+
+function getNext(){
+  let now = new Date();
+  let nowM = now.getHours()*60 + now.getMinutes();
+  let arr = medSchedule.map(x=>{
+    let [h,m] = x.time.split(":");
+    return {...x, total: h*60 + m*1};
+  });
+  let today = arr.filter(x => x.total > nowM);
+  if(today.length) return today[0];
+  return arr[0];
+}
+
+function bindLocalAudio() {
+  const fileInput = document.getElementById("localAudio");
+  const playBtn = document.getElementById("playLocal");
+  const nameLabel = document.getElementById("audioName");
+
+  fileInput.onchange = () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    userAudioUrl = URL.createObjectURL(file);
+    alertSound.src = userAudioUrl;
+    nameLabel.textContent = "已选择：" + file.name;
+  };
+
+  playBtn.onclick = () => {
+    if (alertSound.src) {
+      alertSound.currentTime = 0; alertSound.play();
+      setTimeout(()=> alertSound.pause(), 3000);
+    } else {
+      alert("请先选择本地音频文件！");
+    }
+  };
+}
+
+function initTimeSelect(){
+  let sel = document.getElementById("timeSelect");
+  sel.innerHTML = "";
+  medSchedule.forEach((x,i)=>{
+    let op = document.createElement("option");
+    op.value = i;
+    op.innerText = x.name + " " + x.time;
+    sel.appendChild(op);
+  })
+  document.getElementById("saveTime").onclick = () => {
+    let i = sel.value * 1;
+    let t = document.getElementById("newTime").value;
+    if(t){ medSchedule[i].time = t; alert("修改成功！"); initTimeSelect(); }
+  }
+}
+
+function initMedSelect(){
+  let sel = document.getElementById("medSelect");
+  sel.innerHTML = "";
+  allMeds.forEach(m => {
+    let op = document.createElement("option");
+    op.value = m;
+    op.innerText = m;
+    sel.appendChild(op);
+  })
+}
+
+function bindMedImg(){
+  document.getElementById("saveMedImg").onclick = () => {
+    let med = document.getElementById("medSelect").value;
+    let file = document.getElementById("medImgUpload").files[0];
+    if(!med || !file){ alert("请选择药品和图片"); return; }
+    let url = URL.createObjectURL(file);
+    medImgMap[med] = url;
+    localStorage.setItem("medImgMap", JSON.stringify(medImgMap));
+    alert("保存成功！");
+  }
+}
+
+function addHistory(title,time){
+  let d = new Date();
+  let str = d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + " " +
+            d.getHours() + ":" + d.getMinutes().toString().padStart(2,"0");
+  history.unshift(title + " " + time + " —— 已完成 " + str);
+  if(history.length > 100) history = history.slice(0,100);
+  localStorage.setItem("medHistory", JSON.stringify(history));
+  loadHistory();
+}
+function loadHistory(){
+  let b = document.getElementById("historyList");
+  b.innerHTML = history.map(s => `<div class='history-item'>${s}</div>`).join("");
+}
+document.getElementById("clearHistory").onclick = () => {
+  history = [];
+  localStorage.setItem("medHistory", "[]");
+  loadHistory();
+}
+</script>
+</body>
 </html>
