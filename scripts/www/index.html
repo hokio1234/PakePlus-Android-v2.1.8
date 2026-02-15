@@ -13,12 +13,9 @@ body{margin:0;padding:12px;background:#f4f7fa;font-size:32px}
 .next-info{text-align:center;color:#007aff;font-weight:bold;margin:8px 0;font-size:32px}
 .btn{width:100%;padding:14px;border:none;border-radius:12px;margin:6px 0;font-size:32px;background:#007aff;color:white}
 .btn-gray{background:#888}
-.med-btn{width:100%;padding:14px;margin:7px 0;border:none;border-radius:12px;background:#ff3b30;color:white;text-align:left;font-size:32px;display:flex;justify-content:space-between;align-items:center}
+.med-btn{width:100%;padding:14px;margin:7px 0;border:none;border-radius:12px;background:#ff3b30;color:white;text-align:left;font-size:32px}
 .med-btn.done{background:#34c759}
-.img-icon{width:36px;height:36px;background:#fff;border-radius:6px;padding:4px}
 .popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;color:white;font-size:52px;z-index:999}
-.img-popup{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;z-index:1000}
-.img-popup img{max-width:90%;max-height:90%}
 .panel{margin:16px 0;padding:12px;border:1px solid #ddd;border-radius:12px}
 .panel-title{font-weight:bold;margin-bottom:8px;font-size:34px}
 select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font-size:32px}
@@ -29,12 +26,11 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
 .tab button.active{background:#007aff;color:white}
 .page{display:none}
 .page.show{display:block}
-.upload-row{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="title">智能吃药提醒管家</div>
+  <div class="title">智能提醒管家</div>
 
   <div class="tab">
     <button class="tabbtn active" data-page="home">主页</button>
@@ -42,6 +38,7 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
     <button class="tabbtn" data-page="history">记录</button>
   </div>
 
+  <!-- 主页 -->
   <div id="home" class="page show">
     <div class="tip-text" id="tipText" style="display:none"></div>
     <div class="next-info" id="nextTxt"></div>
@@ -49,6 +46,7 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
     <div id="medArea"></div>
   </div>
 
+  <!-- 设置 -->
   <div id="setting" class="page">
     <div class="panel">
       <div class="panel-title">选择本地提醒铃声</div>
@@ -65,13 +63,6 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
     </div>
 
     <div class="panel">
-      <div class="panel-title">药品照片设置</div>
-      <select id="medSelect" style="margin-bottom:8px"></select>
-      <input type="file" id="medImgUpload" accept="image/*" style="margin-bottom:8px">
-      <button class="btn btn-gray" id="saveMedImg">保存药品照片</button>
-    </div>
-
-    <div class="panel">
       <div class="panel-title">重复天数</div>
       <select id="repeatDay">
         <option value="0">每天重复</option>
@@ -84,6 +75,7 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
     </div>
   </div>
 
+  <!-- 记录 -->
   <div id="history" class="page">
     <div class="panel-title">服药记录</div>
     <div class="history-box" id="historyList"></div>
@@ -91,28 +83,24 @@ select,input{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%;font
   </div>
 
   <div class="popup" id="okPopup">你真棒 ✅</div>
-  <div class="img-popup" id="imgPopup" onclick="this.style.display='none'">
-    < img id="bigImg">
-  </div>
 </div>
 
 <script>
+//==============================
 let medSchedule = [
   {time:"08:00",name:"早餐前",list:["泮托拉唑片 1片"]},
-  {time:"10:00",name:"早餐后1小时",list:["舍曲林片 2片","沙库巴曲 1.5片","螺内酯片 1.5片","甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
-  {time:"16:00",name:"下午4点",list:["甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
+  {time:"10:00",name:"餐后1小时",list:["舍曲林片 2片","沙库巴曲 1.5片","螺内酯片 1.5片","甲磺酸倍他司汀 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
+  {time:"16:00",name:"下午4点",list:["甲磺酸倍他司汀 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
   {time:"20:00",name:"晚上8点",list:["阿托伐他汀 1片","甲磺酸倍他司汀片 2片","脉管复胶囊 4片","杞菊地黄丸 8粒","滴玻璃酸钠眼药水","量血压"]},
   {time:"21:00",name:"晚上9点",list:["富马酸喹硫平 1片"]}
 ];
 
-let allMeds = [];
-medSchedule.forEach(g => g.list.forEach(m => { if(!allMeds.includes(m)) allMeds.push(m); }));
-let medImgMap = JSON.parse(localStorage.getItem("medImgMap") || "{}");
-
+//================ 音频 =====================
 let alertSound = new Audio();
 alertSound.loop = true;
 let userAudioUrl = null;
 
+//================ 全局变量 ================
 let current = null;
 let done = new Set();
 let timer10 = null;
@@ -122,11 +110,19 @@ let autoBackTimer = null;
 let history = JSON.parse(localStorage.getItem("medHistory") || "[]");
 let nineDone = false;
 
+//================ 启动 =====================
 window.onload = () => {
-  tabSwitch(); initTimeSelect(); initMedSelect(); loadHistory(); bindLocalAudio(); bindMedImg(); startAutoBack();
-  setInterval(checkNow,1000); setInterval(showHome,1000); showHome();
+  tabSwitch();
+  initTimeSelect();
+  loadHistory();
+  bindLocalAudio();
+  startAutoBack();
+  setInterval(checkNow, 1000);
+  setInterval(showHome, 1000);
+  showHome();
 }
 
+//================ 标签切换 =================
 function tabSwitch(){
   document.querySelectorAll(".tabbtn").forEach(b=>{
     b.onclick = () => {
@@ -139,6 +135,7 @@ function tabSwitch(){
   })
 }
 
+//================ 1分钟无操作返回主页 =====
 function startAutoBack() {
   resetAutoBack();
   document.addEventListener("touchstart", resetAutoBack);
@@ -147,7 +144,9 @@ function startAutoBack() {
 }
 function resetAutoBack() {
   clearTimeout(autoBackTimer);
-  autoBackTimer = setTimeout(() => { goHome(); }, 60000);
+  autoBackTimer = setTimeout(() => {
+    goHome();
+  }, 60000);
 }
 function goHome() {
   document.querySelectorAll(".tabbtn").forEach(x => x.classList.remove("active"));
@@ -156,6 +155,7 @@ function goHome() {
   document.getElementById("home").classList.add("show");
 }
 
+//================ 主页显示 =================
 function showHome(){
   if(current) return;
   document.getElementById("medArea").innerHTML = "";
@@ -191,6 +191,7 @@ function showHome(){
   }
 }
 
+//================ 检查时间 =================
 function checkNow(){
   if(current) return;
   let now = new Date();
@@ -199,40 +200,40 @@ function checkNow(){
   if(item) startRemind(item);
 }
 
+//================ 开始提醒 =================
 function startRemind(item){
   current = item;
   done.clear();
   nineDone = item.time === "21:00";
   document.getElementById("earlyBtn").style.display = "none";
 
-  if(alertSound.src){ alertSound.currentTime = 0; alertSound.play(); }
+  if(alertSound.src){
+    alertSound.currentTime = 0;
+    alertSound.play();
+  }
   timer1m = setTimeout(()=>alertSound.pause(), 60000);
   timer2h = setTimeout(stopAll, 2*60*60*1000);
   timer10 = setInterval(()=>{
     if(done.size < item.list.length && alertSound.src){
-      alertSound.currentTime = 0; alertSound.play();
+      alertSound.currentTime = 0;
+      alertSound.play();
       setTimeout(()=>alertSound.pause(), 60000);
     }
   }, 10*60*1000);
   showBtns(item);
 }
 
+//================ 显示药品按钮 =============
 function showBtns(item){
   let area = document.getElementById("medArea");
   area.innerHTML = `<div style='text-align:center;font-weight:bold;margin:10px;font-size:32px'>${item.name} 服药</div>`;
   item.list.forEach((s,i)=>{
     let btn = document.createElement("button");
     btn.className = "med-btn";
-    btn.innerHTML = `<span>${s}</span>`;
-
-    let imgIcon = document.createElement("img");
-    imgIcon.src = "https://p3-flow-imagex-sign.bytecdn.com/tos-cn-i-a9rns2rl1c/9b9d0e0f6b9f40009c000f0c00000000~tplv-a9rns2rl1c-image.image";
-    imgIcon.className = "img-icon";
-    imgIcon.onclick = (e)=>{ e.stopPropagation(); showMedImg(s); };
-    btn.appendChild(imgIcon);
-
+    btn.innerText = s;
     btn.onclick = () => {
       btn.classList.add("done");
+      btn.innerText = "👍 " + s;
       done.add(i);
       checkAll();
     }
@@ -240,15 +241,7 @@ function showBtns(item){
   })
 }
 
-function showMedImg(medName){
-  if(medImgMap[medName]){
-    document.getElementById("bigImg").src = medImgMap[medName];
-    document.getElementById("imgPopup").style.display = "flex";
-  } else {
-    alert("未设置该药品照片");
-  }
-}
-
+//================ 检查全部完成 =============
 function checkAll(){
   if(!current) return;
   if(done.size == current.list.length){
@@ -260,6 +253,7 @@ function checkAll(){
   }
 }
 
+//================ 停止所有 =================
 function stopAll(){
   alertSound.pause();
   clearInterval(timer10);
@@ -270,6 +264,7 @@ function stopAll(){
   showHome();
 }
 
+//================ 下一次时间 ===============
 function getNext(){
   let now = new Date();
   let nowM = now.getHours()*60 + now.getMinutes();
@@ -282,6 +277,7 @@ function getNext(){
   return arr[0];
 }
 
+//================ 本地音频选择 =============
 function bindLocalAudio() {
   const fileInput = document.getElementById("localAudio");
   const playBtn = document.getElementById("playLocal");
@@ -297,7 +293,8 @@ function bindLocalAudio() {
 
   playBtn.onclick = () => {
     if (alertSound.src) {
-      alertSound.currentTime = 0; alertSound.play();
+      alertSound.currentTime = 0;
+      alertSound.play();
       setTimeout(()=> alertSound.pause(), 3000);
     } else {
       alert("请先选择本地音频文件！");
@@ -305,6 +302,7 @@ function bindLocalAudio() {
   };
 }
 
+//================ 时间修改 =================
 function initTimeSelect(){
   let sel = document.getElementById("timeSelect");
   sel.innerHTML = "";
@@ -317,33 +315,15 @@ function initTimeSelect(){
   document.getElementById("saveTime").onclick = () => {
     let i = sel.value * 1;
     let t = document.getElementById("newTime").value;
-    if(t){ medSchedule[i].time = t; alert("修改成功！"); initTimeSelect(); }
+    if(t){
+      medSchedule[i].time = t;
+      alert("修改成功！");
+      initTimeSelect();
+    }
   }
 }
 
-function initMedSelect(){
-  let sel = document.getElementById("medSelect");
-  sel.innerHTML = "";
-  allMeds.forEach(m => {
-    let op = document.createElement("option");
-    op.value = m;
-    op.innerText = m;
-    sel.appendChild(op);
-  })
-}
-
-function bindMedImg(){
-  document.getElementById("saveMedImg").onclick = () => {
-    let med = document.getElementById("medSelect").value;
-    let file = document.getElementById("medImgUpload").files[0];
-    if(!med || !file){ alert("请选择药品和图片"); return; }
-    let url = URL.createObjectURL(file);
-    medImgMap[med] = url;
-    localStorage.setItem("medImgMap", JSON.stringify(medImgMap));
-    alert("保存成功！");
-  }
-}
-
+//================ 记录 =================
 function addHistory(title,time){
   let d = new Date();
   let str = d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + " " +
